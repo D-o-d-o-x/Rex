@@ -154,14 +154,14 @@ class Rex():
         with patch_stdout():
             try:
                 inp = await self.session.prompt_async(self.prompt,
-                                                 completer = _CompletionLookup(),
+                                                 completer = _CompletionLookup(self.cmds),
                                                  auto_suggest = AutoSuggestFromHistory(),
                                                  bottom_toolbar = [None,self._bottom_toolbar][self.hasToolbar])
             except KeyboardInterrupt:
                 return False
         try:
             words = inp.split(" ")
-            pos = cmds
+            pos = self.cmds
             index = 0
             for i,word in enumerate(words):
                 if not str(type(pos))=="<class 'function'>" and word in pos:
