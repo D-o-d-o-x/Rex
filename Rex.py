@@ -87,7 +87,7 @@ async def arg4(arg1, arg2, arg3, arg4):
 
 # This is an example (the default) cmd-dict
 
-cmds = {
+defaultCmds = {
     "test": test,
     "exit": close,
     "arg": arg,
@@ -103,10 +103,14 @@ cmds = {
 }
 
 class _CompletionLookup(Completer):
+    def __init__(self, cmds):
+        super()
+        self.cmds = cmds
+
     # Dont touch it; it works...
     def get_completions(self, document, complete_event):
         words = document.text.split(" ")
-        pos = cmds
+        pos = self.cmds
         index = -1
         # For evere entered 'word'
         for i,word in enumerate(words):
@@ -135,8 +139,8 @@ class _CompletionLookup(Completer):
                 yield Completion("<"+str(arg)+">", start_position=0)
 
 class Rex():
-    def __init__(self, cmds=cmds, prompt="[~> ", hasToolbar = True, printExceptions = True, raiseExceptions = False,
-                 pipeReturn = False):
+    def __init__(self, cmds=defaultCmds, prompt="[~> ", hasToolbar = True,
+                 printExceptions = True, raiseExceptions = False, pipeReturn = False):
         self.cmds = cmds
         self.prompt = prompt
         self.hasToolbar = hasToolbar
