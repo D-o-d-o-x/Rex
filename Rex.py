@@ -7,11 +7,7 @@ from prompt_toolkit.patch_stdout import patch_stdout
 from prompt_toolkit.completion import Completer
 from prompt_toolkit.completion import Completion
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
-from prompt_toolkit.formatted_text import HTML
 from fuzzywuzzy import fuzz
-
-def bottom_toolbar():
-    return [('bg:green', " All systems nominal")]
 
 async def test():
     print("pokemon go")
@@ -47,7 +43,7 @@ cmds = {
     }
 }
 
-class AutoCompleterPlus(Completer):
+class _CompletionLookup(Completer):
     def get_completions(self, document, complete_event):
         words = document.text.split(" ")
         pos = cmds
@@ -73,17 +69,27 @@ class AutoCompleterPlus(Completer):
                 arg = args[len(words)-index-1]
                 yield Completion("<"+str(arg)+">", start_position=0)
 
-async def Rex(cmds=cmds):
-    session = PromptSession()
-    while True:
+class Rex():
+    def __init__(self, cmds=cmds, prompt="[~> ", hasToolbar = True, printExceptions = True, raiseExceptions = False,
+                 pipeReturn = False):
+        self.cmds = cmds
+        self.prompt = prompt
+        self.hasToolbar = hasToolbar
+        self.session = PromptSession()
+        self.toolbar = [("", "")]
+        self.printExceptions = printExceptions
+        self.raiseExceptions = raiseExceptions
+        self.pipeReturn = pipeReturn
+
+    async def once(self):
         with patch_stdout():
             try:
-                inp = await session.prompt_async("[~> ",
-                                                 completer = AutoCompleterPlus(),
+                inp = await self.session.prompt_async(self.prompt,
+                                                 completer = _CompletionLookup(),
                                                  auto_suggest = AutoSuggestFromHistory(),
-                                                 bottom_toolbar = bottom_toolbar)
+                                                 bottom_toolbar = [None,self._bottom_toolbar][self.hasToolbar])
             except KeyboardInterrupt:
-                return True
+                return False
         try:
             words = inp.split(" ")
             pos = cmds
@@ -95,10 +101,35 @@ async def Rex(cmds=cmds):
                     break
                 index = i
             if str(type(pos))=="<class 'function'>":
-                await pos(*words[index+1:])
+                if len(inspect.getfullargspec(pos)[0])!=len(words[index+1:]):
+                    print("[!] The given commands expects "+str(len(inspect.getfullargspec(pos)[0]))+" arguments, "+
+                          "but "+str(len(words[index+1:]))+" were given")
+                else:
+                    ret = await pos(*words[index+1:])
+                    if self.pipeReturn:
+                        return ret
             else:
                 print("[!] No such command")
         except Exception as e:
-            print("[!] An Exception Occured: "+str(e))
-            for line in traceback.format_exc().split("\n"):
-                print("[ ] "+line)
+            if self.printExceptions:
+                print("[!] An Exception Occured: "+str(e))
+                for line in traceback.format_exc().split("\n"):
+                    print("[ ] "+line)
+            if self.raiseExceptions:
+                raise e
+        return True
+
+    async def run(self):
+        if self.pipeReturn:
+            raise Exception("Cannot 'run', if pipeReturn is set to true")
+        while await self.once():
+            pass
+
+    def runFromSync(self):
+        asyncio.run(self.run())
+
+    def _bottom_toolbar(self):
+        return self.toolbar
+
+    async def setToolbarMsg(self, msg: str, col: str = "bg:black"):
+        self.toolbar = [(col, " "+msg)]
