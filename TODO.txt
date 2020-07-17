@@ -1,0 +1,5 @@
+ - Refactor parsing logic
+ - Understand quotes (and don't split at spaces within quotes)
+ - Syntax information in toolbar (configurable)
+ - Colorful Exceptions?
+ - Support for other delimiter than " " e.g. "."
