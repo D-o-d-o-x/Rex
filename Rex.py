@@ -8,7 +8,7 @@ from prompt_toolkit.completion import Completer
 from prompt_toolkit.completion import Completion
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from fuzzywuzzy import fuzz
-                                                                                                
+
 #                @@@@
 #      &@((((((((@@&(@@@
 #   &(((((@(((((((@(((((((((((((((
@@ -64,12 +64,13 @@ from fuzzywuzzy import fuzz
 #                                     @                                @
 #                                                @@@@,     @@@
 
+
+# These are the example functions, that we are going to map to
+
 async def test():
     print("pokemon go")
-
 async def close():
     exit()
-
 async def nA():
     print("this is a test")
 async def nB():
@@ -82,6 +83,9 @@ async def arg2(arg1, arg2):
     print("got " + arg1 + " and " + arg2)
 async def arg4(arg1, arg2, arg3, arg4):
     print("got " + arg1 + " and " + arg2 + " and " + arg3 + " and " + arg4)
+
+
+# This is an example (the default) cmd-dict
 
 cmds = {
     "test": test,
@@ -99,26 +103,32 @@ cmds = {
 }
 
 class _CompletionLookup(Completer):
+    # Dont touch it; it works...
     def get_completions(self, document, complete_event):
         words = document.text.split(" ")
         pos = cmds
         index = -1
+        # For evere entered 'word'
         for i,word in enumerate(words):
             index = i
+            # We traverse one step further down the tree, until we hit a function
             if not str(type(pos))=="<class 'function'>" and word in pos:
                 pos = pos[word]
             else:
                 break
+        # If we are not at a function yet, we are going to generate autocomplete hints
         if not str(type(pos))=="<class 'function'>" :
             comps = []
             for word in pos:
                 score = fuzz.partial_ratio(word,words[-1]) + fuzz.ratio(word, words[-1])
                 if score > 90 or (len(words)==index+1 and str(document.text).endswith(" ")):
                     comps.append([word, score])
+            # Which are sorted by relevance
             comps.sort(key = lambda x: x[1], reverse = True)
             for i in range(min(5, len(comps))):
                 yield Completion(comps[i][0], start_position=0)
         else:
+            # When we are already at a function, we give hints about expected arguments
             args = inspect.getfullargspec(pos)[0]
             if len(args)>len(words)-index-1:
                 arg = args[len(words)-index-1]
