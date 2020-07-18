@@ -1,5 +1,4 @@
 import asyncio
-import aiojobs
 import inspect
 import traceback
 from prompt_toolkit import PromptSession
@@ -8,6 +7,7 @@ from prompt_toolkit.completion import Completer
 from prompt_toolkit.completion import Completion
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from fuzzywuzzy import fuzz
+from shlex import split
 
 #                @@@@
 #      &@((((((((@@&(@@@
@@ -109,7 +109,20 @@ class _CompletionLookup(Completer):
 
     # Dont touch it; it works...
     def get_completions(self, document, complete_event):
-        words = document.text.split(" ")
+        try:
+            words = split(document.text)
+        except ValueError:
+            # Will happen, if the user opened a " or ' and hasn't closed it yet...
+            # Were just gonna pretend he did already close it and try again...
+            try:
+                if document.text.find('"')!=-1:
+                    words = split(document.text+'"')
+                elif document.text.find("'")!=-1:
+                    words = split(document.text+"'")
+                else:
+                    raise ValueError("Unable to auto-close quotation")
+            except ValueError:
+                words = document.text.split(" ")
         pos = self.cmds
         index = -1
         # For evere entered 'word'
@@ -160,7 +173,7 @@ class Rex():
             except KeyboardInterrupt:
                 return False
         try:
-            words = inp.split(" ")
+            words = split(inp)
             pos = self.cmds
             index = 0
             for i,word in enumerate(words):
@@ -202,3 +215,7 @@ class Rex():
 
     async def setToolbarMsg(self, msg: str, col: str = "bg:black"):
         self.toolbar = [(col, " "+msg)]
+
+if __name__=="__main__":
+    rex = Rex()
+    rex.runFromSync()
