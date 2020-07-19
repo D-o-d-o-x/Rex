@@ -8,6 +8,7 @@ from prompt_toolkit.completion import Completion
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from fuzzywuzzy import fuzz
 from shlex import split
+import pprint
 
 #                @@@@
 #      &@((((((((@@&(@@@
@@ -83,6 +84,8 @@ async def arg2(arg1, arg2):
     print("got " + arg1 + " and " + arg2)
 async def arg4(arg1, arg2, arg3, arg4):
     print("got " + arg1 + " and " + arg2 + " and " + arg3 + " and " + arg4)
+async def question():
+    await rex.ask("What is your question? ")
 
 
 # This is an example (the default) cmd-dict
@@ -93,6 +96,7 @@ defaultCmds = {
     "arg": arg,
     "arg2": arg2,
     "arg4": arg4,
+    "question": question,
     "nested": {
         "a": nA,
         "b": nB,
@@ -153,15 +157,15 @@ class _CompletionLookup(Completer):
 
 class Rex():
     def __init__(self, cmds=defaultCmds, prompt="[~> ", hasToolbar = True,
-                 printExceptions = True, raiseExceptions = False, pipeReturn = False):
+                 printExceptions = True, raiseExceptions = False):
         self.cmds = cmds
         self.prompt = prompt
+        self.askPrompt = "[?> "
         self.hasToolbar = hasToolbar
         self.session = PromptSession()
         self.toolbar = [("", "")]
         self.printExceptions = printExceptions
         self.raiseExceptions = raiseExceptions
-        self.pipeReturn = pipeReturn
 
     async def once(self):
         with patch_stdout():
@@ -187,9 +191,13 @@ class Rex():
                     print("[!] The given commands expects "+str(len(inspect.getfullargspec(pos)[0]))+" arguments, "+
                           "but "+str(len(words[index+1:]))+" were given")
                 else:
-                    ret = await pos(*words[index+1:])
-                    if self.pipeReturn:
-                        return ret
+                    # run the function
+                    if inspect.iscoroutinefunction(pos):
+                        # function is async
+                        ret = await pos(*words[index+1:])
+                    else:
+                        ret = pos(*words[index+1:])
+                    await self.print(ret)
             else:
                 print("[!] No such command")
         except Exception as e:
@@ -202,10 +210,26 @@ class Rex():
         return True
 
     async def run(self):
-        if self.pipeReturn:
-            raise Exception("Cannot 'run', if pipeReturn is set to true")
         while await self.once():
             pass
+
+    async def print(self, txt):
+        if txt==None:
+            return
+        nice = pprint.pformat(txt)
+        for line in nice.split("\n"):
+            print("[<] "+line)
+
+    async def ask(self, question):
+        print("[?] "+question)
+        with patch_stdout():
+            try:
+                # new prompt instance, so the history / completer dont get mixed up
+                inp = await PromptSession().prompt_async(self.askPrompt,
+                                                        bottom_toolbar = [None,self._bottom_toolbar][self.hasToolbar])
+            except KeyboardInterrupt:
+                return False
+        return inp
 
     def runFromSync(self):
         asyncio.run(self.run())

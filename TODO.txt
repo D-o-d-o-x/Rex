@@ -1,2 +1,4 @@
- - Refactor parsing logic
  - Syntax information in toolbar (configurable)
+ - Allow other delimiters (e.g. ".")
+ - Support named arguments
+ - Include often used commands in a defaults collection (e.g. close)
