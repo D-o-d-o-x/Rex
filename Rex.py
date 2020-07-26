@@ -70,8 +70,6 @@ import pprint
 
 async def test():
     print("pokemon go")
-async def close():
-    exit()
 async def nA():
     print("this is a test")
 async def nB():
@@ -88,11 +86,20 @@ async def question():
     await rex.ask("What is your question? ")
 
 
+class stdCmds:
+    async def close():
+      exit()
+
+    async def debug():
+      from ptpdb import set_trace
+      set_trace()
+
 # This is an example (the default) cmd-dict
 
 defaultCmds = {
+    "exit": stdCmds.close,
+    "debug": stdCmds.debug,
     "test": test,
-    "exit": close,
     "arg": arg,
     "arg2": arg2,
     "arg4": arg4,
