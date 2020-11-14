@@ -2,3 +2,4 @@
  - Allow other delimiters (e.g. ".")
  - Support named arguments
  - Include more often used commands in a defaults collection (e.g. close)
+ - add help / list-cmds command
